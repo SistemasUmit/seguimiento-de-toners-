@@ -13,7 +13,7 @@ Los registros se guardan en Firebase Firestore. Cuando la aplicación está cone
 
 Las dos direcciones públicas llevan a la misma aplicación. Para presentarla, abre la primera en un navegador con conexión a Internet. No es necesario abrir VS Code para mostrar la versión publicada. La carpeta del proyecto en este computador está en `C:\Users\Sistemas\Documents\toner-tracker`.
 
-> **Antes de compartir la URL:** el sitio está publicado y actualmente muestra registros. La aplicación no tiene inicio de sesión; comparte la dirección solo con personas autorizadas y no introduzcas información privada o sensible hasta que se configure el acceso seguro en Firebase. Durante una demostración, evita guardar, editar o eliminar registros reales.
+> **Acceso y seguridad:** el código de esta carpeta incluye inicio de sesión y permite solo la cuenta cuyo UID está configurado. Para que esa protección también aplique al sitio publicado, despliega tanto la aplicación como las reglas de `firestore.rules` en Firebase. Un repositorio privado no vuelve privada la página publicada; no compartas la contraseña de la cuenta autorizada.
 
 ## Explicación general
 
@@ -139,31 +139,37 @@ Para asignar un movimiento a un mes, la aplicación usa la fecha de recarga cuan
 - Los registros y las listas se almacenan en la colección `registros` de Firestore. La configuración de listas se guarda en un documento especial de esa colección.
 - El tablero se actualiza automáticamente cuando Firestore recibe cambios.
 - Si no se puede conectar, la página muestra un aviso de conexión y no se pueden guardar los cambios.
-- La aplicación no cuenta actualmente con inicio de sesión, usuarios ni permisos por persona. La configuración de Firebase que carga el navegador no es una contraseña.
+- La aplicación solicita correo y contraseña de Firebase Authentication. Solo se autoriza la cuenta indicada por UID en el cliente y en las reglas de Firestore; cerrar sesión oculta el tablero y detiene la suscripción en tiempo real.
 
-> **Seguridad:** no uses reglas de Firestore que permitan leer y escribir a cualquiera para guardar datos sensibles. Que la URL no se publique no impide que otras personas accedan a los datos si las reglas lo permiten. Antes de usar información real o compartir el sitio ampliamente, configura Firebase Authentication y reglas de Firestore que requieran usuarios autorizados, e integra el inicio de sesión en la aplicación. Mientras eso no esté implementado, usa únicamente datos de prueba y reglas acordes con ese uso.
+> **Seguridad:** la interfaz de inicio de sesión no protege los datos por sí sola; también hay que publicar `firestore.rules` en Firebase. Esas reglas permiten leer y escribir únicamente a la cuenta cuyo UID está configurado. No compartas su contraseña ni publiques reglas que permitan acceso público. La cuenta compartida no identifica cuál de las personas hizo cada cambio.
+
+### Activar el inicio de sesión
+
+1. En Firebase Console, abre **Authentication > Método de acceso** y habilita **Correo electrónico/contraseña**.
+2. En **Authentication > Usuarios**, crea la cuenta. El correo sirve como nombre de usuario; no guardes la contraseña en este repositorio.
+3. Comprueba que el UID de esa cuenta coincida con `AUTHORIZED_UID` en `script.js` y con el UID permitido en `firestore.rules`.
+4. Desde la carpeta del proyecto, ejecuta `firebase login` con una cuenta que tenga acceso al proyecto y luego `firebase deploy`. Este despliegue publica Hosting y las reglas configuradas en `firebase.json`.
+5. Prueba la URL publicada: sin sesión debe mostrar el formulario; con la cuenta autorizada debe cargar los registros. Una cuenta con otro UID debe ser rechazada.
+
+No publiques solo Hosting ni solo las reglas durante el cambio: la interfaz y las reglas deben quedar sincronizadas. Mientras las reglas antiguas `allow read, write: if true` sigan publicadas, Firestore continúa abierto aunque el formulario de inicio de sesión ya esté en el código.
 
 ## Configuración para desarrollo
 
 ### Compartir el código en GitHub
 
-1. Crea en GitHub un repositorio **privado** y copia su dirección HTTPS. No marques la opción de crear un README si vas a subir esta carpeta, porque ya tiene uno.
-2. En VS Code, abre la carpeta `toner-tracker` y usa **Control de código fuente > Publicar en GitHub** para publicar el proyecto, o conecta la dirección del repositorio desde la terminal.
-3. Comprueba que el repositorio incluya `index.html`, `style.css`, `script.js`, `firebase-config.js`, `firebase.json`, `.firebaserc`, `README.md`, `umit.png` y `.vscode/`.
-4. No subas `.venv/`, `.firebase/`, `node_modules/` ni archivos `.env`; `.gitignore` ya excluye esas carpetas y archivos locales.
-
-Si el repositorio remoto ya está creado y esta carpeta todavía no tiene un remoto, estos son los comandos para conectarlo y subir la rama principal. Sustituye la dirección de ejemplo por la URL HTTPS copiada desde GitHub:
+Este proyecto ya tiene configurado el remoto `origin` y la rama `main`. Desde la terminal de VS Code, en la carpeta del proyecto, revisa y sube los cambios así:
 
 ```powershell
-git init
-git add .
-git commit -m "Preparar proyecto para compartir"
-git branch -M main
-git remote add origin https://github.com/USUARIO/REPOSITORIO.git
-git push -u origin main
+git status
+git add README.md .gitignore firebase.json index.html script.js style.css firestore.rules
+git diff --cached --stat
+git commit -m "Agregar inicio de sesión y reglas de acceso"
+git push origin main
 ```
 
-Si Git indica que no hay cambios para confirmar, continúa con `git push`. Si `origin` ya existe, no repitas `git remote add origin`; verifica el remoto con `git remote -v` y luego usa `git push -u origin main`.
+Revisa `git status` y el resumen preparado antes del commit. El `.gitignore` excluye `.firebase/`, `.venv/`, `node_modules/`, archivos `.env` y archivos temporales del sistema; no excluye los archivos de la aplicación ni `firestore.rules`, que sí se necesitan en el repositorio. No subas contraseñas.
+
+Si en otra copia del proyecto todavía no existe el remoto, consulta o configura `origin` con `git remote -v` y `git remote add origin URL_DEL_REPOSITORIO`; no necesitas repetir `git init` en esta carpeta.
 
 En el otro computador, instala Git y VS Code, clona el repositorio y abre la carpeta:
 
@@ -183,9 +189,9 @@ git push
 
 El proyecto es una página HTML/CSS/JavaScript y carga Firebase desde Internet; no necesita `npm install` para ejecutarse. Para probarlo, abre la carpeta clonada en VS Code y usa **Live Server** sobre `index.html`. `firebase-config.js` y `.firebaserc` conectan con el proyecto Firebase existente, así que déjalos incluidos si el equipo debe usar esa misma base de datos.
 
-La carpeta `.vscode/` incluye una tarea que inicia un observador al abrir el proyecto. Cuando detecta cambios en archivos, intenta publicar la página en Firebase Hosting. Para que la publicación funcione en otro computador, instala Firebase CLI e inicia sesión con una cuenta que tenga permiso para ese proyecto. La tarea no sustituye a Git ni sincroniza el código entre equipos.
+La carpeta `.vscode/` incluye una tarea que inicia un observador al abrir el proyecto. Cuando detecta cambios en archivos, intenta publicar la página en Firebase Hosting. Para que la publicación funcione en otro computador, instala Firebase CLI e inicia sesión con una cuenta que tenga permiso para ese proyecto. La tarea no sustituye a Git ni sincroniza el código entre equipos. Las reglas de Firestore se publican por separado con `firebase deploy --only firestore:rules`.
 
-**Importante:** tener acceso al repositorio no concede permisos de Firebase, y un repositorio privado no vuelve privada la página publicada. Los movimientos permanecen en Firestore, no en GitHub. Como la aplicación no tiene inicio de sesión, revisa las reglas de Firestore antes de permitir que otras personas usen la URL o modifiquen datos.
+**Importante:** tener acceso al repositorio no concede permisos de Firebase, y un repositorio privado no vuelve privada la página publicada. Los movimientos permanecen en Firestore, no en GitHub. Mantén sincronizados el UID permitido en `script.js` y `firestore.rules`; publica las reglas en Firebase para que la protección sea efectiva en el servidor.
 
 ### Preparar Firebase
 
@@ -193,7 +199,7 @@ La carpeta `.vscode/` incluye una tarea que inicia un observador al abrir el pro
 2. Crea una base de datos **Cloud Firestore**.
 3. Registra una aplicación web en la configuración del proyecto.
 4. Copia la configuración web que proporciona Firebase en `firebase-config.js`, reemplazando los valores de ejemplo.
-5. Configura las reglas de Firestore según el nivel de acceso requerido. La aplicación no incluye autenticación, así que no habilites reglas que dependan de un usuario autenticado hasta que se integre ese flujo.
+5. Configura las reglas con el UID autorizado. No uses reglas que permitan acceso público ni reglas genéricas para cualquier usuario autenticado.
 
 ### Ejecutar en el computador
 

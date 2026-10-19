@@ -10,6 +10,21 @@
 <link rel="stylesheet" href="style.css?v=3">
 </head>
 <body>
+<!-- Acceso privado a la aplicación; solo la cuenta autorizada puede abrir el tablero. -->
+<main class="auth-screen" id="authScreen">
+  <form class="auth-panel" id="loginForm">
+    <img src="umit.png" alt="" class="auth-mark">
+    <h1>Seguimiento de Tóners</h1>
+    <p>Inicia sesión para continuar.</p>
+    <label for="loginEmail">Correo electrónico</label>
+    <input id="loginEmail" type="email" autocomplete="username" required>
+    <label for="loginPassword">Contraseña</label>
+    <input id="loginPassword" type="password" autocomplete="current-password" required>
+    <p class="auth-error" id="loginError" role="alert" aria-live="polite"></p>
+    <button class="btn btn-primary" id="btnLogin" type="submit">Iniciar sesión</button>
+  </form>
+</main>
+
 <!-- Contenedor principal de la aplicación de seguimiento. -->
 <div class="wrap">
   <!-- Encabezado con identidad de la institución y acceso al formulario. -->
@@ -24,6 +39,7 @@
     <div class="header-actions">
       <button class="btn btn-ghost" id="btnOptions" type="button">Editar listas</button>
       <button class="btn btn-primary" id="btnNew">+ Nuevo registro</button>
+      <button class="btn btn-ghost" id="btnLogout" type="button">Cerrar sesión</button>
     </div>
   </div>
 

@@ -10,6 +10,11 @@ firebase-debug.*.log*
 # Firebase cache
 .firebase/
 
+# Operating system files
+Thumbs.db
+Desktop.ini
+.DS_Store
+
 # Local Python environment (not required by this web application)
 .venv/
 __pycache__/

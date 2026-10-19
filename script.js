@@ -2,16 +2,22 @@
 import { firebaseConfig } from './firebase-config.js';
 import { initializeApp } from "https://www.gstatic.com/firebasejs/10.13.0/firebase-app.js";
 import {
+  getAuth, onAuthStateChanged, signInWithEmailAndPassword, signOut
+} from "https://www.gstatic.com/firebasejs/10.13.0/firebase-auth.js";
+import {
   getFirestore, collection, onSnapshot,
   addDoc, updateDoc, deleteDoc, doc, setDoc
 } from "https://www.gstatic.com/firebasejs/10.13.0/firebase-firestore.js";
 
 // Inicializa Firebase y apunta a la colección donde se guardan los registros.
 const app = initializeApp(firebaseConfig);
+const auth = getAuth(app);
 const db = getFirestore(app);
 const recordsCol = collection(db, "registros");
 const SETTINGS_DOC_ID = 'app_settings';
 const settingsRef = doc(recordsCol, SETTINGS_DOC_ID);
+const AUTHORIZED_UID = 'iXIzrwtekxN8QMpZUge3grgAsp53';
+let unsubscribeRecords = null;
 
 // Estado local de la interfaz y opciones iniciales para filtros y formularios.
 let records = [];
@@ -60,27 +66,80 @@ function showStatus(msg, color){
   setTimeout(()=>el.classList.remove('show'), 1800);
 }
 
-// Sincroniza los registros en tiempo real y actualiza vistas cuando cambian.
-onSnapshot(recordsCol, (snapshot) => {
-  const settingsDocument = snapshot.docs.find(d => d.id === SETTINGS_DOC_ID);
-  if(settingsDocument){
-    const savedSettings = settingsDocument.data();
-    settings = {
-      servicios: normalizeOptions(savedSettings.servicios, DEFAULT_SERVICIOS),
-      responsables: normalizeOptions(savedSettings.responsables, DEFAULT_PERSONAS),
-    };
+// Sincroniza Firestore solo después de validar la cuenta autenticada.
+function startRecordsListener(){
+  if(unsubscribeRecords) return;
+  unsubscribeRecords = onSnapshot(recordsCol, (snapshot) => {
+    const settingsDocument = snapshot.docs.find(d => d.id === SETTINGS_DOC_ID);
+    if(settingsDocument){
+      const savedSettings = settingsDocument.data();
+      settings = {
+        servicios: normalizeOptions(savedSettings.servicios, DEFAULT_SERVICIOS),
+        responsables: normalizeOptions(savedSettings.responsables, DEFAULT_PERSONAS),
+      };
+    }
+    records = snapshot.docs
+      .filter(d => d.id !== SETTINGS_DOC_ID)
+      .map(d => ({ id: d.id, ...d.data() }));
+    populateFilterOptions();
+    render();
+    renderMonthlyReport();
+    document.getElementById('subtitle').textContent =
+      `${records.length} registro${records.length===1?'':'s'} · sincronizado en tiempo real`;
+  }, (error) => {
+    document.getElementById('subtitle').textContent = 'No se pudo conectar a la base de datos';
+    console.error(error);
+  });
+}
+
+function stopRecordsListener(){
+  if(unsubscribeRecords){
+    unsubscribeRecords();
+    unsubscribeRecords = null;
   }
-  records = snapshot.docs
-    .filter(d => d.id !== SETTINGS_DOC_ID)
-    .map(d => ({ id: d.id, ...d.data() }));
-  populateFilterOptions();
-  render();
-  renderMonthlyReport();
-  document.getElementById('subtitle').textContent =
-    `${records.length} registro${records.length===1?'':'s'} · sincronizado en tiempo real`;
-}, (error) => {
-  document.getElementById('subtitle').textContent = 'No se pudo conectar a la base de datos';
-  console.error(error);
+  records = [];
+}
+
+const loginForm = document.getElementById('loginForm');
+const loginError = document.getElementById('loginError');
+loginForm.addEventListener('submit', async (event) => {
+  event.preventDefault();
+  const button = document.getElementById('btnLogin');
+  button.disabled = true;
+  loginError.textContent = '';
+  try{
+    const email = document.getElementById('loginEmail').value.trim();
+    const password = document.getElementById('loginPassword').value;
+    const credential = await signInWithEmailAndPassword(auth, email, password);
+    if(credential.user.uid !== AUTHORIZED_UID){
+      await signOut(auth);
+      throw new Error('not-authorized');
+    }
+  }catch(error){
+    console.error(error);
+    loginError.textContent = error.message === 'not-authorized'
+      ? 'Esta cuenta no tiene permiso para entrar.'
+      : 'No se pudo iniciar sesión. Revisa el correo y la contraseña.';
+  }finally{
+    button.disabled = false;
+  }
+});
+
+document.getElementById('btnLogout').addEventListener('click', () => signOut(auth));
+
+onAuthStateChanged(auth, async (user) => {
+  if(!user){
+    document.body.classList.remove('authenticated');
+    stopRecordsListener();
+    return;
+  }
+  if(user.uid !== AUTHORIZED_UID){
+    await signOut(auth);
+    loginError.textContent = 'Esta cuenta no tiene permiso para entrar.';
+    return;
+  }
+  document.body.classList.add('authenticated');
+  startRecordsListener();
 });
 
 // Completa filtros y listas del formulario con valores iniciales y existentes.
