@@ -1,0 +1,203 @@
+<!DOCTYPE html>
+<html lang="es">                 
+<head>
+<!-- Metadatos, título y recursos visuales compartidos por la página. -->
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0"> 
+<title>Seguimiento de Tóners</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Archivo:wght@600;700;800&family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="style.css?v=3">
+</head>
+<body>
+<!-- Contenedor principal de la aplicación de seguimiento. -->
+<div class="wrap">
+  <!-- Encabezado con identidad de la institución y acceso al formulario. -->
+  <div class="header">
+    <div class="brand">
+      <img src="umit.png" alt="UMIT" class="mark">
+        <div class="brand-copy">
+          <h1>SEGUIMIENTO DE TONERS</h1>
+          <div class="subtitle" id="subtitle">Conectando…</div>
+        </div>
+      </div>
+    <div class="header-actions">
+      <button class="btn btn-ghost" id="btnOptions" type="button">Editar listas</button>
+      <button class="btn btn-primary" id="btnNew">+ Nuevo registro</button>
+    </div>
+  </div>
+
+  <!-- Indicadores que resumen el estado actual de los registros. -->
+  <div class="stats">
+    <div class="stat"><div class="num" id="statTotal">0</div><div class="lbl">Registros totales</div></div>
+    <div class="stat ok"><div class="num" id="statOk">0</div><div class="lbl">Recargados / cambiados</div></div>
+    <div class="stat warn"><div class="num" id="statPend">0</div><div class="lbl">Pendientes</div></div>
+    <div class="stat danger"><div class="num" id="statSin">0</div><div class="lbl">Sin stock</div></div>
+  </div>
+
+  <!-- Filtros rápidos por estado, búsqueda de texto y datos relacionados. -->
+  <div class="toolbar" id="estadoChips">
+
+    
+    <div class="chip active" data-v="">Todos</div>
+    <div class="chip" data-v="RECARGADO">Recargado</div>
+    <div class="chip" data-v="PENDIENTE">Pendiente</div>
+    <div class="chip" data-v="SIN STOCK">Sin stock</div>
+    <div class="chip" data-v="CAMBIADO">Garantía</div>
+  </div>
+
+  <!-- Controles para buscar y filtrar registros por servicio y responsable. -->
+  <div class="filters">
+    <input type="text" id="fSearch" placeholder="Buscar ID de tóner, servicio u observación…">
+    <label class="date-filter" for="fFecha">
+      <span>Fecha de cambio o recarga</span>
+      <input type="date" id="fFecha">
+    </label>
+    <select id="fServicio"><option value="">Todos los servicios</option></select>
+    <select id="fPersona"><option value="">Responsables</option></select>
+  </div>
+
+  <!-- Reporte mensual imprimible con cantidades y valores configurables. -->
+  <details class="monthly-report" id="monthlyReport">
+    <summary>Resumen mensual <span>Ver reporte</span></summary>
+    <div class="report-head">
+      <div>
+        <p>Recargas y cambios agrupados por servicio.</p>
+      </div>
+      <div class="report-actions">
+        <label for="reportMonth">Mes</label>
+        <input type="month" id="reportMonth">
+        <label for="reportTonerValue">Tóner $</label>
+        <input type="number" id="reportTonerValue" value="35000" min="0" step="1000">
+        <label for="reportCylinderValue">Cilindro $</label>
+        <input type="number" id="reportCylinderValue" value="20000" min="0" step="1000">
+        <button class="btn btn-primary" id="btnPrintReport" type="button">Imprimir</button>
+      </div>
+    </div>
+    <div class="report-table-wrap">
+      <table class="report-table">
+        <thead>
+          <tr>
+            <th>Servicio</th>
+            <th>Recargas</th>
+            <th>Cambios</th>
+            <th>Cilindros</th>
+            <th>Valor tóner</th>
+            <th>Valor cilindros</th>
+            <th>Total</th>
+          </tr>
+        </thead>
+        <tbody id="reportBody"></tbody>
+        <tfoot id="reportFoot"><    /tfoot>
+      </table>
+    </div>
+  </details>
+
+  <!-- script.js carga aquí las tarjetas de registros. -->
+  <div class="grid" id="grid"></div>
+</div>
+
+<!-- Ventana para crear, editar o eliminar un registro de tóner. -->
+<div class="overlay" id="overlay">
+  <div class="modal">
+    <h2 id="modalTitle">NUEVO REGISTRO</h2>
+    <div class="form-grid">
+      <!-- Estado final del tóner. -->
+      <div class="field">
+        <label>Estado final</label>
+        <select id="fld_estadoFinal">
+          <option value="RECARGADO">Recargado</option>
+          <option value="CAMBIADO">Garantía</option>
+          <option value="PENDIENTE">Pendiente</option>
+          <option value="SIN STOCK">Sin stock</option>
+        </select>
+      </div>
+      <!-- Identificadores del tóner retirado y su reemplazo. -->
+      <div class="field">
+        <label>ID tóner para cambiar</label>
+        <input type="text" id="fld_idToner" placeholder="ID del tóner vacío">
+      </div>
+      <div class="field">
+          <label>ID tóner de reemplazo (opcional)</label>
+          <input type="text" id="fld_reemplazadoPor" placeholder="ID del tóner nuevo (opcional)">
+      </div>
+      <!-- Servicio relacionado con el registro. -->
+      <div class="field">
+        <label>Servicio</label>
+        <select id="fld_servicio">
+          <option value="">Selecciona un servicio</option>
+        </select>
+      </div>
+      <!-- Fechas y cantidades asociadas al mantenimiento. -->
+      <div class="field">
+        <label>Fecha de cambio</label>
+        <input type="date" id="fld_fechaCambio">
+      </div>
+      <div class="field">
+        <label>Fecha de recarga</label>
+        <input type="date" id="fld_fechaRecarga">
+      </div>
+      <div class="field">
+        <label>N.° cilindros cambiados</label>
+        <input type="number" id="fld_cilindros" min="0" step="1">
+      </div>
+      <div class="field">
+        <label>N.° impresiones</label>
+        <input type="number" id="fld_impresiones" min="0" step="1">
+      </div>
+      <!-- Persona responsable y observación opcional. -->
+      <div class="field">
+        <label>Cambiado por</label>
+        <select id="fld_cambiadoPor">
+          <option value="">Selecciona un responsable</option>
+        </select>
+      </div>
+      <div class="field full">
+        <label>Novedad</label>
+        <input type="text" id="fld_novedad" placeholder="Opcional">
+      </div>
+    </div>
+    <!-- Acciones disponibles en el formulario. -->
+    <div class="modal-actions">
+      <div><button class="btn btn-danger" id="btnDelete" style="display:none;">Eliminar</button></div>
+      <div class="right">
+        <button class="btn btn-ghost" id="btnCancel">Cancelar</button>
+        <button class="btn btn-primary" id="btnSave">Guardar</button>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- Administración de servicios y responsables disponibles en los desplegables. -->
+<div class="overlay" id="optionsOverlay">
+  <section class="modal settings-modal" role="dialog" aria-modal="true" aria-labelledby="optionsTitle">
+    <h2 id="optionsTitle">ADMINISTRAR OPCIONES</h2>
+    <div class="field">
+      <label for="optionsType">Lista</label>
+      <select id="optionsType">
+        <option value="servicios">Servicios</option>
+        <option value="responsables">Responsables</option>
+      </select>
+    </div>
+    <div class="option-add">
+      <input type="text" id="newOption" placeholder="Nombre nuevo" autocomplete="off">
+      <button class="btn btn-primary" id="btnAddOption" type="button">Agregar</button>
+    </div>
+    <ul class="option-list" id="managedOptions"></ul>
+    <div class="modal-actions">
+      <div></div>
+      <div class="right">
+        <button class="btn btn-ghost" id="btnCancelOptions" type="button">Cancelar</button>
+        <button class="btn btn-primary" id="btnSaveOptions" type="button">Guardar cambios</button>
+      </div>
+    </div>
+  </section>
+</div>
+
+<!-- Mensajes breves de confirmación o error de la aplicación. -->
+<div class="status-msg" id="statusMsg"></div>
+
+<!-- Lógica de la aplicación, cargada como módulo JavaScript. -->
+<script type="module" src="script.js?v=2"></script>
+</body>
+</html>

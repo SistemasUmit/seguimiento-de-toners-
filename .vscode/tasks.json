@@ -1,0 +1,21 @@
+{
+  "version": "2.0.0",
+  "tasks": [
+    {
+      "label": "Publicar cambios en Firebase al guardar",
+      "type": "process",
+      "command": "node",
+      "args": ["${workspaceFolder}/.vscode/deploy-watch.js"],
+      "isBackground": true,
+      "problemMatcher": [],
+      "runOptions": {
+        "runOn": "folderOpen"
+      },
+      "presentation": {
+        "reveal": "silent",
+        "panel": "dedicated",
+        "clear": false
+      }
+    }
+  ]
+}

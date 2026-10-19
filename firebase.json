@@ -1,0 +1,20 @@
+{
+  "hosting": {
+    "site": "seguimiento-de-toners",
+    "public": ".",
+    "headers": [
+      {
+        "source": "**/*.@(html|js|css)",
+        "headers": [
+          { "key": "Cache-Control", "value": "no-cache" }
+        ]
+      }
+    ],
+    "ignore": [
+      "firebase.json",
+      "**/.*",
+      "**/node_modules/**",
+      ".venv/**"
+    ]
+  }
+}
